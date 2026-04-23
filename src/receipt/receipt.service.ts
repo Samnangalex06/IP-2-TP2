@@ -8,12 +8,14 @@ import { Repository } from 'typeorm';
 import { Receipt } from './receipt.entity';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
+import { NotificationsService } from 'src/notifications/notifications/notifications.service';
 
 @Injectable()
 export class ReceiptsService {
   constructor(
     @InjectRepository(Receipt)
     private readonly receiptRepo: Repository<Receipt>,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(): Promise<Receipt[]> {
@@ -34,9 +36,16 @@ export class ReceiptsService {
       name: dto.name,
       price: dto.price,
     });
-    return await this.receiptRepo.save(receipt);
-  }
 
+    const savedReceipt = await this.receiptRepo.save(receipt);
+
+    this.notifications.notify('receipt_created', {
+      receiptId: savedReceipt.receiptId,
+      price: savedReceipt.price,
+    });
+
+    return savedReceipt;
+  }
   async update(receiptId: string, dto: UpdateReceiptDto): Promise<Receipt> {
     const receipt = await this.findOne(receiptId);
 
